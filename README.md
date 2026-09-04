@@ -1,4 +1,4 @@
-# 1Fi Marketplace — SDE Intern Assignment
+# 1Fi Marketplace
 
 Standalone React/Vite implementation of the 1Fi Shop + Marketplace flow. The original 1Fi source code was not provided, so the existing app screenshots supplied with the assignment were used as the UI reference. Product/EMI data is separated into a mock API layer.
 
