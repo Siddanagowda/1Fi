@@ -1,4 +1,4 @@
-# 1Fi Marketplace — SDE Intern Assignment
+# 1Fi Marketplace
 
 Standalone React/Vite implementation based on the assignment requirements and the 1Fi app screenshots provided by the candidate. The Marketplace is intentionally shown **inside the Shop page itself**, rather than behind a separate “Explore Marketplace” landing screen.
 
