@@ -99,11 +99,11 @@ const PRODUCTS = [
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const api = {
   async list() {
-    await wait(450);
+    await wait(350);
     return PRODUCTS;
   },
   async one(id) {
-    await wait(250);
+    await wait(220);
     return PRODUCTS.find((x) => x.id === id);
   },
 };
@@ -145,8 +145,9 @@ function Header({ title, back, go }) {
     </header>
   );
 }
+
 function Shop({ go }) {
-  const [t, setT] = useState("Nearby Stores");
+  const [t, setT] = useState("1Fi Marketplace");
   return (
     <div className="page shop">
       <div className="hero">
@@ -183,23 +184,7 @@ function Shop({ go }) {
         ))}
       </div>
       {t === "1Fi Marketplace" ? (
-        <section className="entry">
-          <div className="purple-card">
-            <small>1FI MARKETPLACE</small>
-            <h2>
-              Shop more.
-              <br />
-              Pay later.
-            </h2>
-            <p>
-              Choose your product and a no-cost EMI plan backed by your
-              investments.
-            </p>
-          </div>
-          <button className="primary wide" onClick={() => go("/marketplace")}>
-            Explore Marketplace →
-          </button>
-        </section>
+        <MarketplaceInline go={go} />
       ) : (
         <section>
           <div className="search">
@@ -263,7 +248,8 @@ function Shop({ go }) {
     </div>
   );
 }
-function Marketplace({ go }) {
+
+function MarketplaceInline({ go }) {
   const [data, setData] = useState([]),
     [q, setQ] = useState(""),
     [cat, setCat] = useState("All"),
@@ -292,14 +278,21 @@ function Marketplace({ go }) {
     [data, q, cat],
   );
   return (
-    <div className="page">
-      <Header title="Marketplace" back="/shop" go={go} />
-      <div className="intro">
+    <section className="market-inline">
+      <div className="market-head">
         <div>
-          <h2>Shop today.</h2>
-          <p>Pay later using your mutual funds.</p>
+          <small>1FI MARKETPLACE</small>
+          <h2>
+            Shop products with
+            <br />
+            <i>no-cost EMI.</i>
+          </h2>
+          <p>
+            Choose a product, select your plan and use your investments to pay
+            later.
+          </p>
         </div>
-        <b>✦</b>
+        <div className="market-bubble">✦</div>
       </div>
       <div className="search">
         ⌕{" "}
@@ -355,7 +348,7 @@ function Marketplace({ go }) {
             >
               <div className="pimg">
                 <span>{p.badge}</span>
-                <img src={p.img} />
+                <img src={p.img} alt={p.name} />
               </div>
               <article>
                 <small>{p.brand}</small>
@@ -369,9 +362,10 @@ function Marketplace({ go }) {
           ))}
         </div>
       )}
-    </div>
+    </section>
   );
 }
+
 function Product({ id, go }) {
   const [p, setP] = useState(null),
     [variant, setVariant] = useState(0),
@@ -396,9 +390,9 @@ function Product({ id, go }) {
     monthly = Math.ceil(price / emi);
   return (
     <div className="page detail">
-      <Header title="Details" back="/marketplace" go={go} />
+      <Header title="Product Details" back="/shop" go={go} />
       <div className="detail-img">
-        <img src={p.img} />
+        <img src={p.img} alt={p.name} />
         <span>1 / 1</span>
       </div>
       <div className="title">
@@ -440,7 +434,8 @@ function Product({ id, go }) {
         ))}
       </section>
       <div className="trust">
-        ✓ Secure plan &nbsp;&nbsp; ✓ Delivery available
+        ✓ Secure plan &nbsp;&nbsp; ✓ No-cost EMI &nbsp;&nbsp; ✓ Investment
+        backed
       </div>
       <div className="cta">
         <div>
@@ -454,10 +449,10 @@ function Product({ id, go }) {
               "1fi-order",
               JSON.stringify({ id, variant, color, emi, price }),
             );
-            go("/success");
+            go("/eligibility");
           }}
         >
-          Proceed →
+          Continue with plan →
         </button>
       </div>
     </div>
@@ -481,8 +476,153 @@ function Choice({ title, opts, val, set }) {
     </section>
   );
 }
+
+function Eligibility({ go }) {
+  const [step, setStep] = useState(0);
+  let s = { id: "iphone-17", variant: 0, color: 0, emi: 12 };
+  try {
+    s = { ...s, ...JSON.parse(localStorage.getItem("1fi-order") || "{}") };
+  } catch {}
+  const p = PRODUCTS.find((x) => x.id === s.id) || PRODUCTS[0],
+    v = p.variants[s.variant] || p.variants[0],
+    c = p.colors[s.color] || p.colors[0],
+    monthly = Math.ceil(v[1] / s.emi);
+  const next = () => setStep((x) => x + 1);
+  return (
+    <div className="page eligibility">
+      <Header title="EMI setup" back={"/product/" + p.id} go={go} />
+      <div className="progress">
+        <span className={step >= 0 ? "on" : ""} />
+        <span className={step >= 1 ? "on" : ""} />
+        <span className={step >= 2 ? "on" : ""} />
+      </div>
+      {step === 0 ? (
+        <>
+          <div className="setup-hero">
+            <div className="setup-icon">1Fi</div>
+            <small>BEFORE YOU PROCEED</small>
+            <h2>Let's check your EMI readiness</h2>
+            <p>
+              Your selected plan is <strong>{money(monthly)}/month</strong> for{" "}
+              {s.emi} months. 1Fi uses eligible investments as security for the
+              purchase.
+            </p>
+          </div>
+          <div className="check-card">
+            <CheckRow
+              title="1Fi account"
+              text="Sign in or create your account"
+              done={false}
+            />
+            <CheckRow
+              title="KYC verification"
+              text="Required before an investment pledge"
+              done={false}
+            />
+            <CheckRow
+              title="Mutual funds"
+              text="Link eligible investments to continue"
+              done={false}
+            />
+          </div>
+          <button className="primary wide" onClick={next}>
+            Sign in & check eligibility →
+          </button>
+        </>
+      ) : step === 1 ? (
+        <>
+          <div className="setup-hero">
+            <div className="setup-icon">✓</div>
+            <small>ACCOUNT VERIFIED</small>
+            <h2>Your account is ready</h2>
+            <p>
+              Now link eligible mutual funds. You can review the amount before
+              any pledge is created.
+            </p>
+          </div>
+          <div className="fund-card">
+            <div>
+              <span>Eligible investment value</span>
+              <strong>₹1,25,000</strong>
+            </div>
+            <div>
+              <span>Required for this purchase</span>
+              <strong>{money(v[1])}</strong>
+            </div>
+            <div className="fund-progress">
+              <span style={{ width: "64%" }} />
+            </div>
+            <small>Eligible amount is sufficient for this demo purchase.</small>
+          </div>
+          <button className="secondary wide" onClick={next}>
+            Link mutual funds
+          </button>
+          <button className="text" onClick={() => setStep(0)}>
+            ← Back
+          </button>
+        </>
+      ) : (
+        <>
+          <div className="setup-hero">
+            <div className="setup-icon green">✓</div>
+            <small>FUNDS LINKED</small>
+            <h2>Ready to create your pledge</h2>
+            <p>Review the order and confirm the investment-backed payment.</p>
+          </div>
+          <div className="pledge-card">
+            <div className="pledge-product">
+              <img src={p.img} alt="" />
+              <div>
+                <small>{p.brand}</small>
+                <h3>{p.name}</h3>
+                <p>
+                  {v[0]} • {c}
+                </p>
+              </div>
+            </div>
+            <div className="line">
+              <span>Product price</span>
+              <strong>{money(v[1])}</strong>
+            </div>
+            <div className="line">
+              <span>Monthly EMI</span>
+              <strong>{money(monthly)}</strong>
+            </div>
+            <div className="line">
+              <span>Tenure</span>
+              <strong>{s.emi} months</strong>
+            </div>
+            <div className="total">
+              <span>Interest</span>
+              <strong>0%</strong>
+            </div>
+          </div>
+          <button className="primary wide" onClick={() => go("/success")}>
+            Confirm pledge & continue →
+          </button>
+          <p className="fine-print">
+            Demo only: no real mutual-fund pledge, loan or payment is created.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+function CheckRow({ title, text, done }) {
+  return (
+    <div className="check-row">
+      <span>{done ? "✓" : "○"}</span>
+      <div>
+        <strong>{title}</strong>
+        <p>{text}</p>
+      </div>
+      <b>›</b>
+    </div>
+  );
+}
+
 function Success({ go }) {
-  let s = { id: "iphone-17", variant: 0, color: 0, emi: 12, price: 79999 };
+  let s = { id: "iphone-17", variant: 0, color: 0, emi: 12 };
   try {
     s = { ...s, ...JSON.parse(localStorage.getItem("1fi-order") || "{}") };
   } catch {}
@@ -493,15 +633,15 @@ function Success({ go }) {
   return (
     <div className="page success">
       <div className="check">✓</div>
-      <small>PLAN READY</small>
-      <h1>Your EMI plan is selected</h1>
+      <small>ORDER READY</small>
+      <h1>Your EMI plan is confirmed</h1>
       <p>
-        Review the details below. This demo completes the Marketplace frontend
-        journey without processing a real payment.
+        In a real 1Fi flow, the next step would create the investment-backed
+        purchase. This demo shows the complete front-end journey.
       </p>
       <div className="summary">
         <div className="sumhead">
-          <div className="bag">1Fi</div>
+          <img src={p.img} alt="" />
           <div>
             <small>{p.brand}</small>
             <h2>{p.name}</h2>
@@ -522,35 +662,55 @@ function Success({ go }) {
           </div>
         ))}
         <div className="total">
-          <span>Total payable</span>
+          <span>Investment pledge</span>
           <strong>{money(v[1])}</strong>
         </div>
       </div>
-      <button className="primary wide" onClick={() => go("/marketplace")}>
-        Continue shopping →
+      <div className="success-note">
+        ✓ Eligible mutual funds linked &nbsp; • &nbsp; Pledge ready
+      </div>
+      <button className="primary wide" onClick={() => go("/shop")}>
+        Back to Shop →
       </button>
-      <button className="text" onClick={() => go("/shop")}>
+      <button className="text" onClick={() => go("/marketplace")}>
+        Continue shopping
+      </button>
+    </div>
+  );
+}
+
+function Placeholder({ title, go }) {
+  return (
+    <div className="page placeholder">
+      <div className="placeholder-icon">1Fi</div>
+      <h2>{title}</h2>
+      <p>This navigation item is outside the Marketplace assignment scope.</p>
+      <button className="primary" onClick={() => go("/shop")}>
         Back to Shop
       </button>
     </div>
   );
 }
+
 function App() {
-  const [path, setPath] = useState(location.pathname);
+  const [path, setPath] = useState(window.location.pathname);
   const go = (p) => {
-    history.pushState({}, "", p);
+    window.history.pushState({}, "", p);
     setPath(p);
     window.scrollTo(0, 0);
   };
   useEffect(() => {
-    const f = () => setPath(location.pathname);
-    addEventListener("popstate", f);
-    return () => removeEventListener("popstate", f);
+    const f = () => setPath(window.location.pathname);
+    window.addEventListener("popstate", f);
+    return () => window.removeEventListener("popstate", f);
   }, []);
   if (path.startsWith("/product/"))
     return <Product id={path.split("/")[2]} go={go} />;
-  if (path === "/marketplace") return <Marketplace go={go} />;
+  if (path === "/eligibility") return <Eligibility go={go} />;
   if (path === "/success") return <Success go={go} />;
+  if (path === "/marketplace") return <MarketplaceInline go={go} />;
+  if (["/emi", "/limit", "/profile"].includes(path))
+    return <Placeholder title={path.slice(1)} go={go} />;
   return <Shop go={go} />;
 }
 createRoot(document.getElementById("root")).render(
