@@ -1,8 +1,12 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { createRoot } from "react-dom/client";
-import "./style.css";
+import React from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { createRoot } from 'react-dom/client'
+import { apiClient } from './api/client'
+import './style.css'
 
-const CATS = ["All", "Mobiles", "Laptops", "TVs", "Appliances"];
+// ============= Original Code Below (Kept for Reference) =============
+const CATS_OLD = ["All", "Mobiles", "Laptops", "TVs", "Appliances"];
+const CATS = CATS_OLD;
 const PRODUCTS = [
   {
     id: "iphone-17",
@@ -97,14 +101,41 @@ const PRODUCTS = [
   },
 ];
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const toProduct = (product) => {
+  const basePrice = Number(product.price);
+  const variants = Array.isArray(product.variants) ? product.variants : [];
+  const colorOptions = variants
+    .filter((variant) => variant.variant_name?.toLowerCase() === "color")
+    .map((variant) => variant.variant_value);
+  const productVariants = variants
+    .filter((variant) => variant.variant_name?.toLowerCase() !== "color")
+    .map((variant) => [
+      `${variant.variant_name}: ${variant.variant_value}`,
+      basePrice + Number(variant.price_adjustment || 0),
+    ]);
+
+  return {
+    id: product.id,
+    brand: product.name.split(" ")[0],
+    name: product.name,
+    cat: product.category,
+    price: basePrice,
+    badge: Number(product.rating) >= 4.5 ? "Popular" : "Featured",
+    desc: product.description,
+    colors: colorOptions.length ? colorOptions : ["Standard"],
+    variants: productVariants.length ? productVariants : [["Standard", basePrice]],
+    img: product.image_url,
+    emiPlans: Array.isArray(product.emi_plans) ? product.emi_plans : [],
+  };
+};
 const api = {
   async list() {
-    await wait(350);
-    return PRODUCTS;
+    const products = await apiClient.getProducts();
+    return products.map(toProduct);
   },
   async one(id) {
-    await wait(220);
-    return PRODUCTS.find((x) => x.id === id);
+    const product = await apiClient.getProductById(id);
+    return toProduct(product);
   },
 };
 const money = (n) => "₹" + n.toLocaleString("en-IN");
@@ -416,7 +447,14 @@ function Product({ id, go }) {
           </div>
           <b>0% interest</b>
         </div>
-        {[3, 6, 9, 12, 18, 24].map((n) => (
+        {(p.emiPlans.length ? p.emiPlans : [3, 6, 9, 12, 18, 24].map((n) => ({
+          tenure_months: n,
+          emi_amount: Math.ceil(price / n),
+          interest_rate: 0,
+        }))).map((plan) => {
+          const n = plan.tenure_months;
+          const monthlyAmount = Number(plan.emi_amount) || Math.ceil(price / n);
+          return (
           <button
             className={"emi-row " + (emi === n ? "on" : "")}
             onClick={() => setEmi(n)}
@@ -425,13 +463,14 @@ function Product({ id, go }) {
             <i>{emi === n ? "✓" : ""}</i>
             <span>
               <strong>
-                {money(Math.ceil(price / n))} <small>/ month</small>
+                {money(monthlyAmount)} <small>/ month</small>
               </strong>
-              <label>{n} months • 0% interest</label>
+              <label>{n} months • {plan.interest_rate}% interest</label>
             </span>
             {n === 12 && <em>Recommended</em>}
           </button>
-        ))}
+          );
+        })}
       </section>
       <div className="trust">
         ✓ Secure plan &nbsp;&nbsp; ✓ No-cost EMI &nbsp;&nbsp; ✓ Investment
@@ -447,7 +486,7 @@ function Product({ id, go }) {
           onClick={() => {
             localStorage.setItem(
               "1fi-order",
-              JSON.stringify({ id, variant, color, emi, price }),
+              JSON.stringify({ id, variant, color, emi, price, product: p }),
             );
             go("/eligibility");
           }}
@@ -483,7 +522,7 @@ function Eligibility({ go }) {
   try {
     s = { ...s, ...JSON.parse(localStorage.getItem("1fi-order") || "{}") };
   } catch {}
-  const p = PRODUCTS.find((x) => x.id === s.id) || PRODUCTS[0],
+  const p = s.product || PRODUCTS.find((x) => x.id === s.id) || PRODUCTS[0],
     v = p.variants[s.variant] || p.variants[0],
     c = p.colors[s.color] || p.colors[0],
     monthly = Math.ceil(v[1] / s.emi);
@@ -626,7 +665,7 @@ function Success({ go }) {
   try {
     s = { ...s, ...JSON.parse(localStorage.getItem("1fi-order") || "{}") };
   } catch {}
-  const p = PRODUCTS.find((x) => x.id === s.id) || PRODUCTS[0],
+  const p = s.product || PRODUCTS.find((x) => x.id === s.id) || PRODUCTS[0],
     v = p.variants[s.variant] || p.variants[0],
     c = p.colors[s.color] || p.colors[0],
     m = Math.ceil(v[1] / s.emi);
